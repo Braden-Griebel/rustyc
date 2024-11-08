@@ -3,7 +3,7 @@ use regex;
 
 /// Lexer which processes source and returns a vec of tokens
 #[derive(Debug)]
-struct Lexer {
+pub(crate) struct Lexer {
     /// Source code
     source: String,
     /// Processed Tokens
@@ -214,7 +214,7 @@ impl Token {
 }
 
 #[derive(Debug)]
-enum LexerError {
+pub enum LexerError {
     RegexFailure,
     UnknownToken, 
     MatchLengthError,

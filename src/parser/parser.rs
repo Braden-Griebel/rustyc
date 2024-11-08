@@ -18,28 +18,30 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Stmt, ParseError> {
-        let program = self.statement()?;
-        Ok(program)
+        let body = self.function()?;
+        Ok(Stmt::Program {
+            body:Box::new(body)
+        })
     }
 
     fn function(&mut self) -> Result<Stmt, ParseError> {
         // Consume int
-        self.consume(TokenType::Int, ParseError::ExpectedType)?;
+        _=self.consume(TokenType::Int, ParseError::ExpectedType)?;
         // Get identifier
-        let identifier = self.consume_return(TokenType::Identifier, ParseError::ExpectedIdentifier)?;
+        let identifier = self.consume(TokenType::Identifier, ParseError::ExpectedIdentifier)?;
         let name = match identifier.lexeme {
             None => {return Err(ParseError::ExpectedIdentifier)}
             Some(name) => {name}
         };
         let name_expr = Box::new(Expr::Identifier {value: name});
         // Consume left paren
-        self.consume(TokenType::LeftParen, ParseError::ExpectedLeftParen)?;
+        _=self.consume(TokenType::LeftParen, ParseError::ExpectedLeftParen)?;
         // Consume void
-        self.consume(TokenType::Void, ParseError::InvalidParams)?;
+        _=self.consume(TokenType::Void, ParseError::InvalidParams)?;
         // Consume right paren
-        self.consume(TokenType::RightParen, ParseError::UnmatchedParen)?;
+        _=self.consume(TokenType::RightParen, ParseError::UnmatchedParen)?;
         // Consume left bracket
-        self.consume(TokenType::LeftBrace, ParseError::ExpectedLeftBrace)?;
+        _=self.consume(TokenType::LeftBrace, ParseError::ExpectedLeftBrace)?;
         // Parse statement
         let body = Box::new(self.statement()?);
         // Consume right bracket
@@ -50,40 +52,67 @@ impl Parser {
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         // Consume return
+        _=self.consume(TokenType::Return, ParseError::ExpectedReturn)?;
         let expression = self.expression()?;
-        Ok(expression)
+        Ok(Stmt::Return {value: Box::new(expression)})
     }
 
-    fn expression(&mut self) -> Result<Stmt, ParseError> {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         // Parse int (only current expression)
         let int = self.int()?;
-        Ok(Expr::new_int())
+        Ok(int)
     }
 
-    fn int(&mut self) -> Result<Expr, ParseError> {}
-
-    fn consume(&mut self, token_type: TokenType, error: ParseError) -> Result<(), ParseError> {
-        if self.tokens[self.current].token_type == token_type {
+    fn int(&mut self) -> Result<Expr, ParseError> {
+        let token = self.advance();
+        let value = match &token.token_type {
+            TokenType::Constant => {
+                match token.lexeme {
+                    None => {return Err(ParseError::InvalidInt)}
+                    Some(v) => {v}
+                }
+            }
+            _=> {return Err(ParseError::UnexpectedToken);}
+        };
+        Ok(Expr::new_int(&value))
+    }
+    
+    // region helper functions
+    
+    fn peek(&self)->Token{
+        self.tokens[self.current].clone()
+    }
+    
+    fn is_at_end(&self)->bool{
+        self.current >= self.tokens.len()
+    }
+    
+    fn previous(&self) -> Token {
+        self.tokens[self.current-1].clone()
+    }
+    
+    fn advance(&mut self) -> Token {
+        if !self.is_at_end() {
             self.current += 1;
-            Ok(())
-        } else {
+        }
+        self.previous()
+    }
+    
+    fn consume(&mut self, token_type: TokenType, error: ParseError) -> Result<Token, ParseError>{
+        if self.check(token_type) {Ok(self.advance())} else {
             Err(error)
         }
     }
-
-    fn consume_return(&mut self, token_type: TokenType,
-                      error: ParseError) -> Result<Token, ParseError> {
-        let cur_token = self.tokens[self.current].clone();
-        if cur_token.token_type != token_type {
-            Err(error)
-        } else {
-            self.current += 1;
-            Ok(cur_token)
+    
+    fn check(&self, token_type: TokenType)->bool {
+        if self.is_at_end() {false} else {
+            self.peek().token_type == token_type
         }
     }
 }
 
 
+#[derive(Debug)]
 pub enum ParseError {
     UnmatchedParen,
     UnmatchedBrace,
@@ -92,5 +121,57 @@ pub enum ParseError {
     ExpectedType,
     ExpectedLeftParen,
     ExpectedLeftBrace,
+    ExpectedReturn,
     InvalidParams,
+    InvalidInt,
+    UnexpectedToken,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::lexer;
+    use super::*;
+    #[test]
+    fn test_parser() {
+        // Create test source code
+        let source_code = "int main(void){return 2;}";
+        // Create lexer
+        let mut lexer = lexer::Lexer::new(source_code.to_string());
+        // Tokenize the input source code
+        let tokens = lexer.tokenize().unwrap();
+        // Create parser
+        let mut parser = Parser::new(tokens);
+        // Parse the source code
+        let ast = parser.parse().unwrap();
+        // Check that the top level of the ast is a program
+        assert!(
+            match ast {
+                Stmt::Program { body } => {
+                    match *body {
+                        Stmt::FuncDef { name, body } => {
+                            let name_ok = match *name {
+                                Expr::Identifier { value } => {
+                                    value == "main"
+                                }
+                                _=>false,
+                            };
+                            name_ok && match *body {
+                                Stmt::Return { value } => {
+                                    match *value {
+                                        Expr::IntConstant { value } => {
+                                            value == 2
+                                        }
+                                        _ => {false}
+                                    }
+                                },
+                                _=> false,
+                            }
+                        }
+                        _=>false,
+                    }
+                },
+                _ => false,
+            }
+        )
+    }
 }
