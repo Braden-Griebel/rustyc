@@ -5,6 +5,7 @@ use std::process::{Command, ExitCode};
 use clap::Parser;
 
 mod lexer;
+mod parser;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]

@@ -151,7 +151,7 @@ impl Lexer {
 
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
-enum TokenType {
+pub(crate) enum TokenType {
     Identifier,
     Constant,
     Int,
@@ -165,9 +165,9 @@ enum TokenType {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-struct Token {
-    token_type: TokenType,
-    lexeme: Option<String>,
+pub(crate) struct Token {
+    pub(crate) token_type: TokenType,
+    pub(crate) lexeme: Option<String>,
 }
 
 impl Token {
