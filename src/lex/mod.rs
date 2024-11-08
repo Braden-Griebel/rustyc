@@ -39,7 +39,7 @@ impl Lexer {
         match_lengths.insert(TokenType::RightBrace, 0);
         token_regex.insert(TokenType::Semicolon, regex::Regex::new(r"^;").unwrap());
         match_lengths.insert(TokenType::Semicolon, 0);
-        // Return lexer object
+        // Return lex object
         Lexer{
             source, tokens, token_regex, match_lengths, position:0
         }
@@ -216,8 +216,7 @@ impl Token {
 #[derive(Debug)]
 pub enum LexerError {
     RegexFailure,
-    UnknownToken, 
-    MatchLengthError,
+    UnknownToken,
 }
 
 #[cfg(test)]

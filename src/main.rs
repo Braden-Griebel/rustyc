@@ -2,10 +2,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
-use clap::Parser;
+use clap::{Parser};
 
-mod lexer;
-mod parser;
+mod lex;
+mod parse;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -13,11 +13,11 @@ struct Cli {
     /// File to operate on
     file: PathBuf,
 
-    /// Run the lexer, but stop before parsing
+    /// Run the lex, but stop before parsing
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     lex: bool,
 
-    /// Run the lexer and parser, but stop before assembly generation
+    /// Run the lex and parse, but stop before assembly generation
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     parse: bool,
 
@@ -39,11 +39,33 @@ fn main() -> ExitCode {
         .expect("Failed to preprocess file");
 
     // Read in the preprocessed file and compile it to assembly
-    let _source_file =
+    let source_file =
         fs::read_to_string(cli.file.with_extension("i")).expect("Unable to read preprocessed file");
     // Delete preprocessed file
     _ = fs::remove_file(cli.file.with_extension("i"));
     // COMPILE
+    // Lex the source file
+    let mut lexer = lex::Lexer::new(source_file);
+    let tokens = match lexer.tokenize() {
+        Ok(tokens) => tokens,
+        Err(_) => return ExitCode::FAILURE,
+    };
+    if cli.lex {
+        return ExitCode::SUCCESS;
+    }
+    // Compile the source file to an AST
+    let mut parser = parse::parsing::Parser::new(tokens);
+    let program_ast = match parser.parse() {
+        Ok(program_ast) => program_ast,
+        Err(_) => return ExitCode::FAILURE,
+    };
+    if cli.parse {
+        return ExitCode::SUCCESS;
+    }
+    // CHANGE ME:
+    // For now just print the ast
+    let mut printer = parse::printing::Printer::new();
+    printer.print_stmt(&program_ast);
     // For now just write an assembly file which returns 0
     _ = fs::write(
         cli.file.with_extension("s"),
