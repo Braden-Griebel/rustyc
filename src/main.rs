@@ -26,23 +26,19 @@ struct Cli {
     /// Perform lexing, parsing, and assembly generation, but stop before code emission
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     codegen: bool,
+
+    /// Don't delete the assembly file
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    keepassembly: bool,
 }
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
     // Preprocess source file
-    let _response = Command::new("gcc")
-        .arg("-E")
-        .arg("-P")
-        .arg(cli.file.clone())
-        .arg("-o")
-        .arg(cli.file.with_extension("i"))
-        .output()
-        .expect("Failed to preprocess file");
+    let _response = Command::new("gcc").arg("-E").arg("-P").arg(cli.file.clone()).arg("-o").arg(cli.file.with_extension("i")).output().expect("Failed to preprocess file");
 
     // Read in the preprocessed file and compile it to assembly
-    let source_file =
-        fs::read_to_string(cli.file.with_extension("i")).expect("Unable to read preprocessed file");
+    let source_file = fs::read_to_string(cli.file.with_extension("i")).expect("Unable to read preprocessed file");
     // Delete preprocessed file
     _ = fs::remove_file(cli.file.with_extension("i"));
     // COMPILE
@@ -66,25 +62,22 @@ fn main() -> ExitCode {
     }
     // Assemble the c_ast into an assembly ast
     let assembler = assemble::assembling::Assembler::new();
-    let assembly_ast = match assembler.assemble(program_ast){
+    let assembly_ast = match assembler.assemble(program_ast) {
         Ok(assembly_ast) => assembly_ast,
         Err(_) => return ExitCode::FAILURE,
     };
     // Emit the assembly to a file
     let mut emitter = Emitter::new();
-    match emitter.emit(cli.file.with_extension("s"), assembly_ast){
+    match emitter.emit(cli.file.with_extension("s"), assembly_ast) {
         Ok(_) => (),
         Err(_) => return ExitCode::FAILURE,
     };
     // Link the assembly file
-    _ = Command::new("gcc")
-        .arg(cli.file.with_extension("s"))
-        .arg("-o")
-        .arg(cli.file.with_extension(""))
-        .output()
-        .expect("Unable to link assembly file");
+    _ = Command::new("gcc").arg(cli.file.with_extension("s")).arg("-o").arg(cli.file.with_extension("")).output().expect("Unable to link assembly file");
     // Delete the assembly file
-    _ = fs::remove_file(cli.file.with_extension("s"));
+    if !cli.keepassembly {
+        _ = fs::remove_file(cli.file.with_extension("s"));
+    }
     // If succesful, return 0
     ExitCode::SUCCESS
 }
