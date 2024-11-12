@@ -1,4 +1,4 @@
-use super::ast::{Stmt, Expr};
+use super::c_ast::{Stmt, Expr};
 use crate::lex::{Token, TokenType};
 
 pub struct Parser {

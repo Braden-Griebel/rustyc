@@ -6,6 +6,7 @@ use clap::{Parser};
 
 mod lex;
 mod parse;
+mod assemble;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
