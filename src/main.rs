@@ -86,5 +86,5 @@ fn main() -> ExitCode {
     // Delete the assembly file
     _ = fs::remove_file(cli.file.with_extension("s"));
     // If succesful, return 0
-    ExitCode::from(0)
+    ExitCode::SUCCESS
 }
