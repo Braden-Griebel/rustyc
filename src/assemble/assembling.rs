@@ -7,11 +7,11 @@ pub struct Assembler{
 }
 
 impl Assembler{
-    fn new(c_ast: Stmt) -> Assembler{
+    pub(crate) fn new() -> Assembler{
         Assembler{}
     }
     
-    fn assemble(&self, stmt: Stmt) -> Result<Box<Instr>,AssemblerError>{
+    pub fn assemble(&self, stmt: Stmt) -> Result<Box<Instr>,AssemblerError>{
         self.assemble_stmt(stmt)
     }
     

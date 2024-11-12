@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
 use clap::{Parser};
+use crate::assemble::emmiting::Emitter;
 
 mod lex;
 mod parse;
@@ -63,18 +64,18 @@ fn main() -> ExitCode {
     if cli.parse {
         return ExitCode::SUCCESS;
     }
-    // CHANGE ME:
-    // For now just print the ast
-    let mut printer = parse::printing::Printer::new();
-    printer.print_stmt(&program_ast);
-    // For now just write an assembly file which returns 0
-    _ = fs::write(
-        cli.file.with_extension("s"),
-        "    .globl main
-main:
-    movl    $0, %eax
-    ret",
-    );
+    // Assemble the c_ast into an assembly ast
+    let assembler = assemble::assembling::Assembler::new();
+    let assembly_ast = match assembler.assemble(program_ast){
+        Ok(assembly_ast) => assembly_ast,
+        Err(_) => return ExitCode::FAILURE,
+    };
+    // Emit the assembly to a file
+    let mut emitter = Emitter::new();
+    match emitter.emit(cli.file.with_extension("s"), assembly_ast){
+        Ok(_) => (),
+        Err(_) => return ExitCode::FAILURE,
+    };
     // Link the assembly file
     _ = Command::new("gcc")
         .arg(cli.file.with_extension("s"))
