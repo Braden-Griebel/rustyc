@@ -1,5 +1,5 @@
 
-
+/// Assembly Instructions AST
 #[derive(Debug, Clone)]
 pub enum Instr {
     /// Represents an assembly program
